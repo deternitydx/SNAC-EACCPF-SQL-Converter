@@ -92,19 +92,40 @@ for filename in fileinput.input():
                     cpf["conven_dec_citation"] = control[0].text
                 elif (ctag == "maintenanceHistory"):
                     # Need to handle the list of Maintenance Events
-                    None;
+                    # None;
+                    # modified_time, event_type, agent_type, description, diff
+                    for maint_event in control:
+                        # handle each event individually
+                        maint_history = {}
+                        if (valueOf(maint_event.tag) == 'maintenanceEvent'):
+                            #handle
+                            for maint_part in maint_event:
+                                if (valueOf(maint_part.tag) == 'eventType'):
+                                    maint_history["event_type"] = maint_part.text
+                                elif (valueOf(maint_part.tag) == 'eventDateTime'):
+                                    maint_history["modified_time"] = maint_part.text
+                                elif (valueOf(maint_part.tag) == 'agentType'):
+                                    maint_history["agent_type"] = maint_part.text
+                                elif (valueOf(maint_part.tag) == 'agent'):
+                                    maint_history["agent"] = maint_part.text
+                                elif (valueOf(maint_part.tag) == 'eventDescription'):
+                                    maint_history["description"] = maint_part.text
+                                else:
+                                    warning("Unknown Tag: ", tag, ctag, valueOf(maint_event.tag), valueOf(maint_part.tag))
+                        else:
+                            warning("Unknown Tag: ", tag, ctag, valueOf(maint_event.tag))
                 elif (ctag == "sources"):
                     for source in control:
                         sources.append({'source_type': source.get('{http://www.w3.org/1999/xlink}type'), 'href': source.get('{http://www.w3.org/1999/xlink}href')});
                 else:
-                    print(ctag)
+                    warning("Unknown Tag: ", tag, ctag)
 
         elif (tag == "cpfDescription"):
             # Handle cpfDescription
             for desc in node:
                 dtag = valueOf(desc.tag)
                 
-                print(dtag)
+                #print(dtag)
         else:
             # Unknown tag
             warning("Unknown Tag: ", tag)

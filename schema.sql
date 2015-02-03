@@ -225,6 +225,7 @@ cpf_id              int,                -- (fk -> cpf.id)
 modified_time       date,
 event_type          enum_event_type,
 agent_type          enum_agent_type,
+agent               text,
 description         text,
 diff                text);              -- keep the diff if we want to undo changes
 
