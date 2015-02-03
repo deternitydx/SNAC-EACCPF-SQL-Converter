@@ -43,6 +43,7 @@ scripts = {}
 # For each file given on standard input, parse and look at
 for filename in fileinput.input():
 
+    print("Parsing: ", filename.strip())
     tree = ET.parse(filename.strip())
     root = tree.getroot()
 
@@ -91,9 +92,6 @@ for filename in fileinput.input():
                 elif (ctag == "conventionDeclaration"):
                     cpf["conven_dec_citation"] = control[0].text
                 elif (ctag == "maintenanceHistory"):
-                    # Need to handle the list of Maintenance Events
-                    # None;
-                    # modified_time, event_type, agent_type, description, diff
                     for maint_event in control:
                         # handle each event individually
                         maint_history = {}
@@ -125,7 +123,65 @@ for filename in fileinput.input():
             for desc in node:
                 dtag = valueOf(desc.tag)
                 
-                #print(dtag)
+                if (dtag == "identity"):
+                    for ident in desc:
+                        itag = valueOf(ident.tag)
+                        if (itag == "entityType"):
+                            cpf["entity_type"] = ident.text
+                        elif(itag == "nameEntry"):
+                            # if it is the first, then it is the preferred name
+                            # convention: first name in the name table is the preferred name
+                            # language, preference_score, authorized_form,original, corporate_name, 
+                            # contributor[{contributor, name_type}]
+                            name = {}
+                            name_contrib = []
+                            name["preference_score"] = ident.get("{http://socialarchive.iath.virginia.edu/}preferenceScore")
+                            for name_part in ident:
+                                if (valueOf(name_part.tag) == "part"):
+                                    name["original"] = name_part.text
+                                elif (valueOf(name_part.tag) == "alternativeForm" or
+                                      valueOf(name_part.tag) == "authorizedForm"):
+                                    name_contrib.append({"contributor":name_part.text, "name_type":valueOf(name_part.tag)})
+                                else:
+                                    warning("Unknown Tag: ", tag, dtag, itag, valueOf(name_part.tag))
+                            name["contributor"] = name_contrib
+                            names.append(name)
+                        else:
+                            warning("Unknown Tag: ", tag, dtag, itag, valueOf(name_part.tag))
+                elif (dtag == "description"):
+                    for description in desc:
+                        d2tag = valueOf(description.tag)
+                        if (d2tag == "existDates"):
+                            None
+                            #TODO
+                        elif (d2tag == "localDescription"):
+                            if (termOnly(description.get("localType")) == "AssociatedSubject"):
+                                subjects.append(description[0].text)
+                                #if (description[1]):
+                                #    warning("Unknown Tag: ", tag, dtag, d2tag, description[1].tag)
+                            else:
+                                warning("Unknown Attribute: ", tag, dtag, d2tag, "localType = ", description.get("localType"))
+                        elif (d2tag == "languageUsed"):
+                            None
+                            #TODO
+                        elif (d2tag == "occupation"):
+                            None
+                            #TODO
+                        elif (d2tag == "biogHist"):
+                            None
+                            #TODO
+                elif (dtag == "relations"):
+                    for rel in desc:
+                        rtag = valueOf(rel.tag)
+                        if (rtag == "cpfRelation"):
+                            None
+                        elif (rtag == "resourceRelation"):
+                            None
+                        else:
+                            warning("Unknown Tag: ", tag, dtag, rtag)
+                else:
+                    warning("Unknown Tag: ", tag, dtag)
+
         else:
             # Unknown tag
             warning("Unknown Tag: ", tag)
