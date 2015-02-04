@@ -28,6 +28,10 @@ create type enum_entity_type as enum (
 );
 
 
+create type enum_document_type as enum (
+);
+
+
 create type enum_language_code as enum (
 );
 
@@ -171,6 +175,7 @@ create table document (
 id                  int                 primary key default nextval('unique_id_seq'),
 name                text,               -- from relationEntry's text
 href                text,               -- link to the resource
+document_type       enum_document_type, -- type of the document
 xml_source          text);              -- from objectXMLWrap
 
 create table occupation (               -- could be split into a join table

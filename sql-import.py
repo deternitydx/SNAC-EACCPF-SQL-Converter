@@ -32,9 +32,9 @@ namespaces = { "snac" : "urn:isbn:1-931666-33-4" ,
         "xlink" : "http://www.w3.org/1999/xlink",
         "snac3" : "http://socialarchive.iath.virginia.edu/"}
 # Register the namespaces
-ET.register_namespace("snac", "urn:isbn:1-931666-33-4")
+ET.register_namespace("eac-cpf", "urn:isbn:1-931666-33-4")
 ET.register_namespace("snac2", "http://socialarchive.iath.virginia.edu/control/term#")
-ET.register_namespace("snac3", "http://socialarchive.iath.virginia.edu/")
+ET.register_namespace("snac", "http://socialarchive.iath.virginia.edu/")
 ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
 
 languages = {}
@@ -43,7 +43,7 @@ scripts = {}
 # For each file given on standard input, parse and look at
 for filename in fileinput.input():
 
-    print("Parsing: ", filename.strip())
+    print("Parsing: ", filename.strip(), file=sys.stderr)
     tree = ET.parse(filename.strip())
     root = tree.getroot()
 
@@ -56,15 +56,14 @@ for filename in fileinput.input():
     occupations = []
     places = []
     subjects = []
+    nationalities = []
     contributors = []
+    biogHists = []
     cpf_otherids = []
-    cpf_sources = []
     cpf_history = []
     cpf_relations = []
     cpf_place = []
-    cpf_function = []
-    cpf_document = []
-    cpf_subject = []
+    # cpf_function = []
     name_contributor = []
 
     # Parse each known tag, in order.  Any missing, report to the warning function.  That way, we can keep track of all problematic or missing tags from the schema
@@ -85,6 +84,7 @@ for filename in fileinput.input():
                 elif (ctag == "maintenanceAgency"):
                     cpf["maintenance_agency"] = control[0].text
                 elif (ctag == "languageDeclaration"):
+                    # Need another place to set this
                     cpf["language_code"] = control[0].get('languageCode')
                     languages[control[0].get('languageCode')] = control[0].text
                     cpf["script_code"] = control[1].get('scriptCode')
@@ -112,6 +112,7 @@ for filename in fileinput.input():
                                     warning("Unknown Tag: ", tag, ctag, valueOf(maint_event.tag), valueOf(maint_part.tag))
                         else:
                             warning("Unknown Tag: ", tag, ctag, valueOf(maint_event.tag))
+                        cpf_history.append(maint_history)
                 elif (ctag == "sources"):
                     for source in control:
                         sources.append({'source_type': source.get('{http://www.w3.org/1999/xlink}type'), 'href': source.get('{http://www.w3.org/1999/xlink}href')});
@@ -129,7 +130,6 @@ for filename in fileinput.input():
                         if (itag == "entityType"):
                             cpf["entity_type"] = ident.text
                         elif(itag == "nameEntry"):
-                            # if it is the first, then it is the preferred name
                             # convention: first name in the name table is the preferred name
                             # language, preference_score, authorized_form,original, corporate_name, 
                             # contributor[{contributor, name_type}]
@@ -152,39 +152,99 @@ for filename in fileinput.input():
                     for description in desc:
                         d2tag = valueOf(description.tag)
                         if (d2tag == "existDates"):
-                            None
-                            #TODO
+                            for edates in description:
+                                if (valueOf(edates.tag) == "dateRange"):
+                                    date = {}
+                                    date["is_range"] = False
+                                    if (valueOf(edates[0].tag) == "fromDate"):
+                                        date["from_date"] = edates[0].get("standardDate")
+                                        date["from_original"] = edates[0].text
+                                        date["from_type"] = termOnly(edates[0].get("localType"))
+                                        if (len(edates) > 1 and valueOf(edates[1].tag) == "toDate"):
+                                            date["to_date"] = edates[1].get("standardDate")
+                                            date["to_original"] = edates[1].text
+                                            date["to_type"] = termOnly(edates[1].get("localType"))
+                                            date["is_range"] = True
+                                    elif (valueOf(edates[0].tag) == "toDate"):
+                                        date["from_date"] = edates[0].get("standardDate")
+                                        date["from_original"] = edates[0].text
+                                        date["from_type"] = termOnly(edates[0].get("localType"))
+                                    else:
+                                        warning("Unknown Tag: ", tag, dtag, d2tag, valueOf(edates.tag), valueOf(edates[0].tag))
+                                    dates.append(date)
+                                elif (valueOf(edates.tag) == "date"):
+                                    date = {}
+                                    date["is_range"] = False
+                                    date["from_date"] = edates.get("standardDate")
+                                    date["from_original"] = edates.text
+                                    date["from_type"] = termOnly(edates.get("localType"))
+                                    dates.append(date)
+                                else:
+                                    warning("Unknown Tag: ", tag, dtag, d2tag, valueOf(edates.tag))
+                            
                         elif (d2tag == "localDescription"):
                             if (termOnly(description.get("localType")) == "AssociatedSubject"):
                                 subjects.append(description[0].text)
-                                #if (description[1]):
-                                #    warning("Unknown Tag: ", tag, dtag, d2tag, description[1].tag)
+                                if (len(description) > 1):
+                                    warning("Unknown Tag: ", tag, dtag, d2tag, description[1].tag)
+                            elif (termOnly(description.get("localType")) == "nationalityOfEntity"):
+                                nationalities.append(description[0].text)
+                                if (len(description) > 1):
+                                    warning("Unknown Tag: ", tag, dtag, d2tag, description[1].tag)
                             else:
                                 warning("Unknown Attribute: ", tag, dtag, d2tag, "localType = ", description.get("localType"))
                         elif (d2tag == "languageUsed"):
-                            None
-                            #TODO
+                            #TODO: compare with other language tags in the control portion
+                            for lang in description:
+                                if (valueOf(lang.tag) == "language"):
+                                    cpf["language_used"] = lang.get("languageCode")
+                                elif (valueOf(lang.tag) == "script"):
+                                    cpf["script_used"] = lang.get("scriptCode")
+                                else:
+                                    warning("Unknown Tag: ", tag, dtag, d2tag, lang.tag)
                         elif (d2tag == "occupation"):
-                            None
-                            #TODO
+                            occupations.append(description[0].text)
+                            if (len(description) > 1):
+                                warning("Unknown Tag: ", tag, dtag, d2tag, description[1].tag)
                         elif (d2tag == "biogHist"):
-                            None
-                            #TODO
+                            biogHists.append(ET.tostring(description, encoding="UTF-8"))
                 elif (dtag == "relations"):
                     for rel in desc:
                         rtag = valueOf(rel.tag)
                         if (rtag == "cpfRelation"):
-                            None
+                            relation = {}
+                            if (len(rel) > 1):
+                                warning("Unknown Tag: ", tag, dtag, d2tag, description[1].tag)
+                            relation["relation_type"] = termOnly(rel.get("{http://www.w3.org/1999/xlink}arcrole"))
+                            relation["relation_ark_id"] = rel.get("{http://www.w3.org/1999/xlink}href")
+                            relation["relation_other_type"] = termOnly(rel.get("{http://www.w3.org/1999/xlink}role"))
+                            if (len(rel) > 0):
+                                relation["relation_entry"] = rel[0].text
+                            else:
+                                relation["relation_entry"] = "" 
+                            cpf_relations.append(relation)
                         elif (rtag == "resourceRelation"):
-                            None
+                            relation = {}
+                            relation["document_role"] = termOnly(rel.get("{http://www.w3.org/1999/xlink}arcrole"))
+                            relation["href"] = rel.get("{http://www.w3.org/1999/xlink}href")
+                            relation["document_type"] = termOnly(rel.get("{http://www.w3.org/1999/xlink}role"))
+                            relation["link_type"] = rel.get("{http://www.w3.org/1999/xlink}type")
+                            for relitem in rel:
+                                if (valueOf(relitem.tag) == "relationEntry"):
+                                    relation["name"] = relitem.text
+                                elif (valueOf(relitem.tag) == "objectXMLWrap"):
+                                    relation["xml_source"] = ET.tostring(relitem, encoding="UTF-8")
+                                elif (valueOf(relitem.tag) == "descriptiveNote"):
+                                    relation["notes"] = ET.tostring(relitem, encoding="UTF-8")
+                                else:
+                                    warning("Unknown Tag: ", tag, dtag, rtag, relitem.tag)
+                            documents.append(relation)
                         else:
                             warning("Unknown Tag: ", tag, dtag, rtag)
                 else:
                     warning("Unknown Tag: ", tag, dtag)
 
         else:
-            # Unknown tag
             warning("Unknown Tag: ", tag)
 
-    #print (cpf)
-    #print(cpf_otherids)
+    print(dates)
