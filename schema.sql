@@ -28,6 +28,12 @@ create type enum_entity_type as enum (
 );
 
 
+create type enum_gender as enum (
+    'Male',
+    'Female'
+);
+
+
 create type enum_document_type as enum (
 );
 
@@ -123,9 +129,12 @@ create table cpf (                      -- Describes one EAC-CPF record
 id                  int                 primary key default nextval('cpf_id_seq'),
 ark_id              text                unique,        -- control/cpfId
 name_id             int,                -- (fk -> name.id) -- for convenience
-entity_type         enum_entity_type    not null,
-language_code       enum_language_code  not null,
+entity_type         enum_entity_type    not null,      -- record language
+gender              enum_gender,    
+language_code       enum_language_code  not null,      -- record language
 script_code         enum_script_code    not null,
+language_used       enum_langauge_used, -- from languageUsed/language (what the entity used)
+script_used         enum_script_used,   -- from languageUsed,script (what the entity used)
 biog_hist           text,
 conven_dec_citation text,               -- from control/conventionDeclaration/citation (currently just VIAF)
 maintenance_agency  text,

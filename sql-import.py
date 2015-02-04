@@ -84,7 +84,6 @@ for filename in fileinput.input():
                 elif (ctag == "maintenanceAgency"):
                     cpf["maintenance_agency"] = control[0].text
                 elif (ctag == "languageDeclaration"):
-                    # Need another place to set this
                     cpf["language_code"] = control[0].get('languageCode')
                     languages[control[0].get('languageCode')] = control[0].text
                     cpf["script_code"] = control[1].get('scriptCode')
@@ -155,20 +154,21 @@ for filename in fileinput.input():
                             for edates in description:
                                 if (valueOf(edates.tag) == "dateRange"):
                                     date = {}
-                                    date["is_range"] = False
+                                    date["is_range"] = True
                                     if (valueOf(edates[0].tag) == "fromDate"):
-                                        date["from_date"] = edates[0].get("standardDate")
-                                        date["from_original"] = edates[0].text
-                                        date["from_type"] = termOnly(edates[0].get("localType"))
-                                        if (len(edates) > 1 and valueOf(edates[1].tag) == "toDate"):
+                                        if (edates[0].text is not None):
+                                            date["from_date"] = edates[0].get("standardDate")
+                                            date["from_original"] = edates[0].text
+                                            date["from_type"] = termOnly(edates[0].get("localType"))
+                                        if (len(edates) > 1 and valueOf(edates[1].tag) == "toDate" and edates[1].text is not None):
                                             date["to_date"] = edates[1].get("standardDate")
                                             date["to_original"] = edates[1].text
                                             date["to_type"] = termOnly(edates[1].get("localType"))
-                                            date["is_range"] = True
                                     elif (valueOf(edates[0].tag) == "toDate"):
-                                        date["from_date"] = edates[0].get("standardDate")
-                                        date["from_original"] = edates[0].text
-                                        date["from_type"] = termOnly(edates[0].get("localType"))
+                                        if (edates[0].text is not None):
+                                            date["to_date"] = edates[0].get("standardDate")
+                                            date["to_original"] = edates[0].text
+                                            date["to_type"] = termOnly(edates[0].get("localType"))
                                     else:
                                         warning("Unknown Tag: ", tag, dtag, d2tag, valueOf(edates.tag), valueOf(edates[0].tag))
                                     dates.append(date)
@@ -181,7 +181,8 @@ for filename in fileinput.input():
                                     dates.append(date)
                                 else:
                                     warning("Unknown Tag: ", tag, dtag, d2tag, valueOf(edates.tag))
-                            
+                        elif (d2tag == "place"):
+                            #TODO Handle place tags and snac:placeEntry items
                         elif (d2tag == "localDescription"):
                             if (termOnly(description.get("localType")) == "AssociatedSubject"):
                                 subjects.append(description[0].text)
@@ -191,10 +192,13 @@ for filename in fileinput.input():
                                 nationalities.append(description[0].text)
                                 if (len(description) > 1):
                                     warning("Unknown Tag: ", tag, dtag, d2tag, description[1].tag)
+                            elif (termOnly(description.get("localType")) == "gender"):
+                                cpf["gender"] = description[0].text
+                                if (len(description) > 1):
+                                    warning("Unknown Tag: ", tag, dtag, d2tag, description[1].tag)
                             else:
                                 warning("Unknown Attribute: ", tag, dtag, d2tag, "localType = ", description.get("localType"))
                         elif (d2tag == "languageUsed"):
-                            #TODO: compare with other language tags in the control portion
                             for lang in description:
                                 if (valueOf(lang.tag) == "language"):
                                     cpf["language_used"] = lang.get("languageCode")
