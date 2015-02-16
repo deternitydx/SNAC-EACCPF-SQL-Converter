@@ -20,79 +20,107 @@
 --
 -- A. Controlled Vocabulary Types
 --
-
+ 
+drop type enum_entity_type;
 create type enum_entity_type as enum (
     'person',
     'corporateBody',
     'family'
 );
 
-
+drop type enum_gender;
 create type enum_gender as enum (
     'Male',
     'Female'
 );
 
-
+drop type enum_document_type;
 create type enum_document_type as enum (
+    'ArchivalResource',
+    'BibliographicResource'
 );
 
-
+drop type enum_language_code;
 create type enum_language_code as enum (
+    'eng'
 );
 
-
+drop type enum_script_code;
 create type enum_script_code as enum (
+    'Latn'
 );
 
+drop type enum_language_used;
+create type enum_language_used as enum (
+    'eng'
+);
 
+drop type enum_script_used;
+create type enum_script_used as enum (
+    'Zyyy'
+);
+
+drop type enum_language;
 create type enum_language as enum (
 );
 
-
+drop type enum_maintenance_status;
 create type enum_maintenance_status as enum (
+    'revised'
 );
 
-
+drop type enum_source_type;
 create type enum_source_type as enum (
+    'simple'
 );
 
-
+drop type enum_record_type;
 create type enum_record_type as enum (
+    'MergedRecord',
+    'viafID'
 );
 
-
+drop type enum_event_type;
 create type enum_event_type as enum (
+    'revised'
 );
 
+drop type enum_agent_type;
 create type enum_agent_type as enum (
+    'machine'
 );
 
+drop type enum_relation_type;
 create type enum_relation_type as enum (
     'correspondedWith',
     'associatedWith'
 );
 
+drop type enum_place_match;
 create type enum_place_match as enum (
     'maybeSame',
     'likelySame',
     'unmatched'
 );
 
+drop type enum_function_type;
 create type enum_function_type as enum (
     'DerivedFromRole'
 );
 
+drop type enum_document_role;
 create type enum_document_role as enum (
     'creatorOf',
     'referencedIn'
 );
 
+drop type enum_name_type;
 create type enum_name_type as enum (
     'authorizedForm',
     'alternativeForm'
 );
 
+drop type enum_date_type;
 create type enum_date_type as enum (
     'Birth',
     'Death'
@@ -133,7 +161,7 @@ entity_type         enum_entity_type    not null,      -- record language
 gender              enum_gender,    
 language_code       enum_language_code  not null,      -- record language
 script_code         enum_script_code    not null,
-language_used       enum_langauge_used, -- from languageUsed/language (what the entity used)
+language_used       enum_language_used, -- from languageUsed/language (what the entity used)
 script_used         enum_script_used,   -- from languageUsed,script (what the entity used)
 biog_hist           text,
 conven_dec_citation text,               -- from control/conventionDeclaration/citation (currently just VIAF)
@@ -190,7 +218,6 @@ xml_source          text);              -- from objectXMLWrap
 create table occupation (               -- could be split into a join table
 -------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
-cpf_id              int,                -- (fk -> cpf.id)
 term                text);              -- string of the occupation
 
 create table place (
@@ -243,6 +270,12 @@ agent               text,
 description         text,
 diff                text);              -- keep the diff if we want to undo changes
 
+create table cpf_occupation (
+-----------------------------
+id                  int                 primary key default nextval('unique_id_seq'),
+cpf_id              int,                -- (fk -> cpf.id)
+occupation_id       int);               -- (fk -> occupation.id)
+
 create table cpf_relations (
 -----------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
@@ -274,7 +307,7 @@ id                  int                 primary key default nextval('unique_id_s
 cpf_id              int,                -- (fk -> cpf.id)
 document_id         int,                -- (fk -> document.id)
 document_role       enum_document_role, -- creatorOf, referencedIn, etc
-href                text,               -- xlink:href to the resource (unnecessary)
+link_type           text,               -- link type
 notes               text);              -- descriptive note.
 
 create table cpf_subject (
