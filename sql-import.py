@@ -57,14 +57,10 @@ for filename in fileinput.input():
     places = []
     subjects = []
     nationalities = []
-    contributors = []
     biogHists = []
     cpf_otherids = []
     cpf_history = []
     cpf_relations = []
-    cpf_place = []
-    # cpf_function = []
-    name_contributor = []
 
     # Parse each known tag, in order.  Any missing, report to the warning function.  That way, we can keep track of all problematic or missing tags from the schema
     for node in root:
@@ -115,6 +111,7 @@ for filename in fileinput.input():
                 elif (ctag == "sources"):
                     for source in control:
                         sources.append({'source_type': source.get('{http://www.w3.org/1999/xlink}type'), 'href': source.get('{http://www.w3.org/1999/xlink}href')});
+                        # TODO: what about the full text of the source?
                 else:
                     warning("Unknown Tag: ", tag, ctag)
 
@@ -183,6 +180,7 @@ for filename in fileinput.input():
                                     warning("Unknown Tag: ", tag, dtag, d2tag, valueOf(edates.tag))
                         elif (d2tag == "place"):
                             #TODO Handle place tags and snac:placeEntry items
+                            None
                         elif (d2tag == "localDescription"):
                             if (termOnly(description.get("localType")) == "AssociatedSubject"):
                                 subjects.append(description[0].text)
