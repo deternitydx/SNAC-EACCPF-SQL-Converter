@@ -5,6 +5,8 @@ import fileinput
 import sys
 # Import XML parser
 import xml.etree.ElementTree as ET
+# Import Postgres connector
+import psycopg2 as pgsql
 
 # Portability
 try:
@@ -24,6 +26,14 @@ def valueOf(tag):
 # Get the value of a term
 def termOnly(term):
     return term.split("#")[1][0:]
+    
+# Insert into database
+def insert_db(db, table, var) :
+    #TODO : try to update or select before doing an insert, just to check.
+    insstr = ''.join(["INSERT INTO ", table, " (", ",".join(var.keys()), ") values ( %(", ")s,%(".join(var.keys()), ")s ) RETURNING id;"])
+    db.execute(insstr, var)
+    return db.fetchone()[0]
+
 
 # Define the namespaces to use
 namespaces = { "snac" : "urn:isbn:1-931666-33-4" ,
@@ -39,6 +49,10 @@ ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
 
 languages = {}
 scripts = {}
+
+# Connect to the postgres DB
+db = pgsql.connect("host=localhost dbname=eaccpf user=snac password=snacsnac")
+db_cur = db.cursor()
 
 # For each file given on standard input, parse and look at
 for filename in fileinput.input():
@@ -249,4 +263,57 @@ for filename in fileinput.input():
         else:
             warning("Unknown Tag: ", tag)
 
-    print(dates)
+    # DB interactions:
+    # db_cur.execute("SQL STATEMENT %(name)s", {name:"blah",...})
+    # db_cur.execute("SQL STATEMENT %s, %s", ("first", "second"))
+    # INSERT INTO table (var, var) VALUES (%s, %s);
+    
+    # Create CPF record in database and get ID, returns id    
+    cpfid = insert_db(db_cur, "cpf", cpf)
+    print(cpfid)
+    #cpfid = 0 # temporary
+    for date_entry in dates:
+        date_entry["cpf_id"] = cpfid
+        insert_db(db_cur, "dates", date_entry)
+    for source in sources:
+        None
+        s_id = insert_db(db_cur, "source", source)
+        insert_db(db_cur, "cpf_sources", {'cpf_id':cpfid, 'source_id':s_id})
+    for occupation in occupations:
+        None
+        o_id = insert_db(db_cur, "occupation", {'term':occupation})
+        insert_db(db_cur, "cpf_occupation", {'cpf_id':cpfid, 'occupation_id':o_id})
+    for subject in subjects:
+        None
+        s_id = insert_db(db_cur, "subject", {'subject':subject})
+        insert_db(db_cur, "cpf_subject", {'cpf_id':cpfid, 'subject_id':s_id})
+    for history in cpf_history:
+        None
+        history["cpf_id"] = cpfid
+        insert_db(db_cur, "cpf_history", history)
+    for otherid in cpf_otherids:
+        None
+        otherid["cpf_id"] = cpfid
+        insert_db(db_cur, "cpf_otherids", otherid)
+    for document in documents:
+        None
+        doc_insert =  {'name':document["name"],'href':document["href"],'document_type':document["document_type"]}
+        if document.has_key('xml_source'):
+            doc_insert['xml_source'] = document["xml_source"]
+        d_id = insert_db(db_cur, "document", doc_insert)
+        insert_db(db_cur, "cpf_document", {'cpf_id':cpfid,'document_id':d_id,'document_role':document["document_role"],'link_type':document["link_type"]})
+    
+    # TODO Handle the following data
+    #print("NAME", names)
+    #print("NATL", nationalities)
+    #print("PLACES", places)
+    #print("BIOG", biogHists)
+    #print("RELS", cpf_relations)
+    
+    # Commit the changes
+    db.commit()
+    
+# Close the database connection
+db_cur.close()
+db.close()
+        
