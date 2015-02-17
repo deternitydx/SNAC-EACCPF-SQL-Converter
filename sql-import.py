@@ -29,8 +29,25 @@ def termOnly(term):
     
 # Insert into database
 def insert_db(db, table, var) :
-    #TODO : try to update or select before doing an insert, just to check.
+    # Try to select on the exact string we're inserting.  If exists, then return that ID.
+    keys = []
+    values = []
+    for k in var.keys():
+        keys.append(k)
+        values.append(var[k])
+    selstr = ''.join(["SELECT id FROM ", table, " WHERE ", "=%s AND ".join(keys), "=%s LIMIT 1"])
+    db.execute(selstr, values)
+    tmp = db.fetchone()
+    if tmp is not None:
+        return tmp[0]
+    # Select didn't return any rows, so do the normal insert.
     insstr = ''.join(["INSERT INTO ", table, " (", ",".join(var.keys()), ") values ( %(", ")s,%(".join(var.keys()), ")s ) RETURNING id;"])
+    db.execute(insstr, var)
+    return db.fetchone()[0]
+    
+# Update a table in the database
+def update_db(db, table, var, where) :
+    insstr = ''.join(["UPDATE ", table, " SET (", ",".join(var.keys()), ") = ( %(", ")s,%(".join(var.keys()), ")s ) WHERE ", where, " RETURNING id;"])
     db.execute(insstr, var)
     return db.fetchone()[0]
 
@@ -76,7 +93,8 @@ for filename in fileinput.input():
     cpf_history = []
     cpf_relations = []
 
-    # Parse each known tag, in order.  Any missing, report to the warning function.  That way, we can keep track of all problematic or missing tags from the schema
+    # Parse each known tag, in order.  Any missing, report to the warning function.  
+    # That way, we can keep track of all problematic or missing tags from the schema
     for node in root:
         tag = valueOf(node.tag)
         
@@ -268,47 +286,67 @@ for filename in fileinput.input():
     # db_cur.execute("SQL STATEMENT %s, %s", ("first", "second"))
     # INSERT INTO table (var, var) VALUES (%s, %s);
     
+    
+    # TODO Handle the following data
+    #print("PLACES", places)
+    #print("RELS", cpf_relations)
+
+
     # Create CPF record in database and get ID, returns id    
     cpfid = insert_db(db_cur, "cpf", cpf)
-    print(cpfid)
+    print("    This record given PostgreSQL CPF_ID: ", cpfid)
     #cpfid = 0 # temporary
     for date_entry in dates:
         date_entry["cpf_id"] = cpfid
         insert_db(db_cur, "dates", date_entry)
     for source in sources:
-        None
         s_id = insert_db(db_cur, "source", source)
         insert_db(db_cur, "cpf_sources", {'cpf_id':cpfid, 'source_id':s_id})
     for occupation in occupations:
-        None
         o_id = insert_db(db_cur, "occupation", {'term':occupation})
         insert_db(db_cur, "cpf_occupation", {'cpf_id':cpfid, 'occupation_id':o_id})
     for subject in subjects:
-        None
         s_id = insert_db(db_cur, "subject", {'subject':subject})
         insert_db(db_cur, "cpf_subject", {'cpf_id':cpfid, 'subject_id':s_id})
+    for nationality in nationalities:
+        n_id = insert_db(db_cur, "nationality", {'nationality':nationality})
+        insert_db(db_cur, "cpf_nationality", {'cpf_id':cpfid, 'nationality_id':n_id})
     for history in cpf_history:
-        None
         history["cpf_id"] = cpfid
         insert_db(db_cur, "cpf_history", history)
     for otherid in cpf_otherids:
-        None
         otherid["cpf_id"] = cpfid
         insert_db(db_cur, "cpf_otherids", otherid)
     for document in documents:
-        None
         doc_insert =  {'name':document["name"],'href':document["href"],'document_type':document["document_type"]}
         if document.has_key('xml_source'):
             doc_insert['xml_source'] = document["xml_source"]
         d_id = insert_db(db_cur, "document", doc_insert)
         insert_db(db_cur, "cpf_document", {'cpf_id':cpfid,'document_id':d_id,'document_role':document["document_role"],'link_type':document["link_type"]})
+        
+    first_name = True
+    for name in names:
+        n_id = insert_db(db_cur, "name", {'cpf_id':cpfid, 'original': name["original"], 'preference_score':name["preference_score"]})
+        for contributor in name["contributor"]:
+            c_id = insert_db(db_cur, "contributor", {'short_name': contributor["contributor"]})
+            insert_db(db_cur, "name_contributor", {'name_id':n_id, 'contributor_id':c_id, 'name_type': contributor["name_type"]})
+        if first_name:
+            # update the cpf table to have this name id
+            update_db(db_cur, "cpf", {'name_id':n_id}, "".join(['id=',str(cpfid)]))
+            first_name = False
     
-    # TODO Handle the following data
-    #print("NAME", names)
-    #print("NATL", nationalities)
-    #print("PLACES", places)
-    #print("BIOG", biogHists)
-    #print("RELS", cpf_relations)
+    # Handle merging biog hists to one cell   
+    first_bh = True
+    bh = None
+    for biogHist in biogHists:
+        if first_bh:
+            bh = ET.fromstring(biogHist)
+            first_bh = False
+        else:
+            bh.extend(ET.fromstring(biogHist))
+   
+    if bh is not None:
+        update_db(db_cur, "cpf", {'biog_hist': ET.tostring(bh)},  "".join(['id=',str(cpfid)]))
     
     # Commit the changes
     db.commit()
