@@ -303,14 +303,17 @@ for filename in fileinput.input():
         s_id = insert_db(db_cur, "source", source)
         insert_db(db_cur, "cpf_sources", {'cpf_id':cpfid, 'source_id':s_id})
     for occupation in occupations:
-        o_id = insert_db(db_cur, "occupation", {'term':occupation})
-        insert_db(db_cur, "cpf_occupation", {'cpf_id':cpfid, 'occupation_id':o_id})
+        if occupation is not None:   
+            o_id = insert_db(db_cur, "occupation", {'term':occupation})
+            insert_db(db_cur, "cpf_occupation", {'cpf_id':cpfid, 'occupation_id':o_id})
     for subject in subjects:
-        s_id = insert_db(db_cur, "subject", {'subject':subject})
-        insert_db(db_cur, "cpf_subject", {'cpf_id':cpfid, 'subject_id':s_id})
+        if subject is not None:   
+            s_id = insert_db(db_cur, "subject", {'subject':subject})
+            insert_db(db_cur, "cpf_subject", {'cpf_id':cpfid, 'subject_id':s_id})
     for nationality in nationalities:
-        n_id = insert_db(db_cur, "nationality", {'nationality':nationality})
-        insert_db(db_cur, "cpf_nationality", {'cpf_id':cpfid, 'nationality_id':n_id})
+        if nationality is not None:   
+            n_id = insert_db(db_cur, "nationality", {'nationality':nationality})
+            insert_db(db_cur, "cpf_nationality", {'cpf_id':cpfid, 'nationality_id':n_id})
     for history in cpf_history:
         history["cpf_id"] = cpfid
         insert_db(db_cur, "cpf_history", history)
