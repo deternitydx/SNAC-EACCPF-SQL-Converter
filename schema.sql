@@ -7903,7 +7903,10 @@ create type enum_language_code as enum (
     'zyn',
     'zyp',
     'zza',
-    'zzj'
+    'zzj',
+    'dut',              -- added by SNAC
+    'ger',              -- added by SNAC
+    'fre'               -- added by SNAC
 );
 
 drop type enum_script_code;
@@ -8149,7 +8152,8 @@ drop type enum_date_type;
 create type enum_date_type as enum (
     'Birth',
     'Death',
-    'Active'
+    'Active',
+    'SuspiciousDate'
 );
 
 
