@@ -123,7 +123,8 @@ create type enum_name_type as enum (
 drop type enum_date_type;
 create type enum_date_type as enum (
     'Birth',
-    'Death'
+    'Death',
+    'Active'
 );
 
 
@@ -215,10 +216,15 @@ href                text,               -- link to the resource
 document_type       enum_document_type, -- type of the document
 xml_source          text);              -- from objectXMLWrap
 
-create table occupation (               -- could be split into a join table
+create table occupation (              
 -------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
 term                text);              -- string of the occupation
+
+create table nationality (             
+-------------------------
+id                  int                 primary key default nextval('unique_id_seq'),
+nationality         text);              -- string of the nationality
 
 create table place (
 ----------------------
@@ -309,6 +315,12 @@ document_id         int,                -- (fk -> document.id)
 document_role       enum_document_role, -- creatorOf, referencedIn, etc
 link_type           text,               -- link type
 notes               text);              -- descriptive note.
+
+create table cpf_nationality (
+------------------------------
+id                  int                 primary key default nextval('unique_id_seq'),
+cpf_id              int,                -- (fk -> cpf.id)
+nationality_id      int);               -- (fk -> nationality.id)
 
 create table cpf_subject (
 ------------------------------
