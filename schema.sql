@@ -7906,6 +7906,10 @@ create type enum_language_code as enum (
     'zzj',
     'dut',              -- added by SNAC
     'ger',              -- added by SNAC
+    'chi',              -- added by SNAC
+    'cze',              -- added by SNAC
+    'slo',              -- added by SNAC
+    'per',              -- added by SNAC
     'fre'               -- added by SNAC
 );
 
