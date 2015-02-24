@@ -8254,6 +8254,8 @@ source_type         enum_source_type,   -- maybe unnecessary
 href                text,
 object_xml          text);
 
+create unique index source_href_idx on source (href);
+
 create table document (
 -------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
@@ -8262,15 +8264,21 @@ href                text,               -- link to the resource
 document_type       enum_document_type, -- type of the document
 xml_source          text);              -- from objectXMLWrap
 
+create unique index document_href_idx on document (href);
+
 create table occupation (              
 -------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
 term                text);              -- string of the occupation
 
+create unique index occupation_term_idx on occupation (term);
+
 create table nationality (             
 -------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
 nationality         text);              -- string of the nationality
+
+create unique index nationality_idx on nationality (nationality);
 
 create table place (
 ----------------------
@@ -8288,11 +8296,14 @@ id                  int                 primary key default nextval('unique_id_s
 subject             text,               -- subject name from localDescription/term
 authority           text);              -- if an authority for the subject is needed
 
+create unique index subject_idx on subject (subject);
+
 create table contributor (              -- Contributors of data (VIAF, LC, WorldCat, etc)
 ---------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
 short_name          text);              -- short name of the contributing entity (VIAF, LC, WorldCat, NLA, etc)
 
+create unique index contributor_idx on contributor (short_name);
 
 --
 -- D. Join/Link Tables
