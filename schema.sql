@@ -7904,13 +7904,26 @@ create type enum_language_code as enum (
     'zyp',
     'zza',
     'zzj',
-    'dut',              -- added by SNAC
-    'ger',              -- added by SNAC
+    'alb',              -- added by SNAC
+    'arm',              -- added by SNAC
+    'baq',              -- added by SNAC
+    'bur',              -- added by SNAC
     'chi',              -- added by SNAC
     'cze',              -- added by SNAC
-    'slo',              -- added by SNAC
+    'dut',              -- added by SNAC
+    'fre',              -- added by SNAC
+    'geo',              -- added by SNAC
+    'ger',              -- added by SNAC
+    'gre',              -- added by SNAC
+    'ice',              -- added by SNAC
+    'mac',              -- added by SNAC
+    'may',              -- added by SNAC
+    'mao',              -- added by SNAC
     'per',              -- added by SNAC
-    'fre'               -- added by SNAC
+    'rum',              -- added by SNAC
+    'slo',              -- added by SNAC
+    'tib',              -- added by SNAC
+    'wel'               -- added by SNAC
 );
 
 drop type enum_script_code;
