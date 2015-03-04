@@ -8194,6 +8194,14 @@ CREATE SEQUENCE "unique_id_seq"
     NO MAXVALUE
     CACHE 1;
 
+-- Sequence for controlled vocabulary
+CREATE SEQUENCE "vocabulary_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
 
 --
 -- C. Main Tables
@@ -8391,3 +8399,9 @@ id                  int                 primary key default nextval('unique_id_s
 name_id             int,                -- (fk -> name.id)
 contributor_id      int,                -- (fk -> contributor.id)
 name_type           enum_name_type);    -- type of name (authorizedForm, alternativeForm)
+
+create table vocabulary (         -- Controlled Vocabulary
+--------------------------------
+id                  int                 primary key default nextval('vocabulary_id_seq'),
+type                text,               -- Type of the vocab
+value               text);              -- Values the vocab may take
