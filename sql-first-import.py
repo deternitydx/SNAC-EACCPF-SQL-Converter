@@ -71,7 +71,7 @@ languages = {}
 scripts = {}
 
 # Connect to the postgres DB
-db = pgsql.connect("host=localhost dbname=eaccpf user=snac password=snacsnac")
+db = pgsql.connect("host=localhost dbname=cpf user=snac password=snacsnac")
 db_cur = db.cursor()
 
 # Counter

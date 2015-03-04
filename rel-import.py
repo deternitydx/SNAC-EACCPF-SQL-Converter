@@ -29,17 +29,6 @@ def termOnly(term):
     
 # Insert into database
 def insert_db(db, table, var) :
-    # Try to select on the exact string we're inserting.  If exists, then return that ID.
-    keys = []
-    values = []
-    for k in var.keys():
-        keys.append(k)
-        values.append(var[k])
-    selstr = ''.join(["SELECT id FROM ", table, " WHERE ", "=%s AND ".join(keys), "=%s LIMIT 1"])
-    db.execute(selstr, values)
-    tmp = db.fetchone()
-    if tmp is not None:
-        return tmp[0]
     # Select didn't return any rows, so do the normal insert.
     insstr = ''.join(["INSERT INTO ", table, " (", ",".join(var.keys()), ") values ( %(", ")s,%(".join(var.keys()), ")s ) RETURNING id;"])
     db.execute(insstr, var)
@@ -48,7 +37,7 @@ def insert_db(db, table, var) :
 # Insert into database
 def lookup_cpf_byark(db, ark) :
     # Try to select on the exact string we're inserting.  If exists, then return that ID.
-    db.execute("SELECT id FROM cpf WHERE ark_id=%s LIMIT 1", (ark))
+    db.execute("SELECT id FROM cpf WHERE ark_id=%s LIMIT 1", [ark])
     tmp = db.fetchone()
     if tmp is not None:
         return tmp[0]
@@ -77,8 +66,11 @@ languages = {}
 scripts = {}
 
 # Connect to the postgres DB
-db = pgsql.connect("host=localhost dbname=eaccpf user=snac password=snacsnac")
+db = pgsql.connect("host=localhost dbname=cpf user=snac password=snacsnac")
 db_cur = db.cursor()
+
+# Counter
+i = 0
 
 # For each file given on standard input, parse and look at
 for filename in fileinput.input():
@@ -309,8 +301,14 @@ for filename in fileinput.input():
             if relid is not None:
                 insert_db(db_cur, 'cpf_relations', {'cpf_id1':cpfid, 'cpf_id2':relid, 'relation_type':rel["relation_type"], 'relation_entry': rel["relation_entry"]})
 
-    # Commit the changes
-    db.commit()
+    # Commit the changes every 1000
+    i = i + 1
+    if i % 1000 == 0:
+        db.commit()
+        print("** Completed 1000 inserts **")
+
+# Commit before closing
+db.commit()
     
 # Close the database connection
 db_cur.close()
