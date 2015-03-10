@@ -49,6 +49,13 @@ CREATE SEQUENCE "vocabulary_id_seq"
 -- B. Main Tables
 --
 
+create table users {                    -- Users of the system (editors, authors, etc)
+----------------------
+id                  int                 primary key default nextval('unique_id_seq'),
+userid              text                unique,        -- text-based user ids
+email               text,               -- contact information for tracking
+name                text);              -- full name text
+
 create table cpf (                      -- Describes one EAC-CPF record
 -------------------
 id                  int                 primary key default nextval('cpf_id_seq'),
