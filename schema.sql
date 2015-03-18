@@ -49,7 +49,7 @@ CREATE SEQUENCE "vocabulary_id_seq"
 -- B. Main Tables
 --
 
-create table users {                    -- Users of the system (editors, authors, etc)
+create table users (                    -- Users of the system (editors, authors, etc)
 ----------------------
 id                  int                 primary key default nextval('unique_id_seq'),
 userid              text                unique,        -- text-based user ids
