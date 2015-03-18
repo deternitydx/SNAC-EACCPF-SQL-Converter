@@ -39,7 +39,7 @@ def lookup_db(db, table, var) :
     tmp = db.fetchone()
     if tmp is not None:
         return tmp[0]
-    return None
+    return insert_db(db, table, var);
 
 # Insert into database
 def insert_db(db, table, var) :
@@ -71,7 +71,7 @@ languages = {}
 scripts = {}
 
 # Connect to the postgres DB
-db = pgsql.connect("host=localhost dbname=cpf user=snac password=snacsnac")
+db = pgsql.connect("host=localhost dbname=eaccpf user=snac password=snacsnac")
 db_cur = db.cursor()
 
 # Counter
@@ -192,16 +192,28 @@ for filename in fileinput.input():
                                     date["is_range"] = True
                                     if (valueOf(edates[0].tag) == "fromDate"):
                                         if (edates[0].text is not None):
-                                            date["from_date"] = edates[0].get("standardDate")
+                                            stddate = edates[0].get("standardDate")
+                                            if stddate[:1] == "-":
+                                                date["from_bc"] = True
+                                                stddate = stddate[1:]
+                                            date["from_date"] = stddate 
                                             date["from_original"] = edates[0].text
                                             date["from_type"] = termOnly(edates[0].get("localType"))
                                         if (len(edates) > 1 and valueOf(edates[1].tag) == "toDate" and edates[1].text is not None):
-                                            date["to_date"] = edates[1].get("standardDate")
+                                            stddate = edates[1].get("standardDate")
+                                            if stddate[:1] == "-":
+                                                date["to_bc"] = True
+                                                stddate = stddate[1:]
+                                            date["to_date"] = stddate 
                                             date["to_original"] = edates[1].text
                                             date["to_type"] = termOnly(edates[1].get("localType"))
                                     elif (valueOf(edates[0].tag) == "toDate"):
                                         if (edates[0].text is not None):
-                                            date["to_date"] = edates[0].get("standardDate")
+                                            stddate = edates[0].get("standardDate")
+                                            if stddate[:1] == "-":
+                                                date["to_bc"] = True
+                                                stddate = stddate[1:]
+                                            date["to_date"] = stddate 
                                             date["to_original"] = edates[0].text
                                             date["to_type"] = termOnly(edates[0].get("localType"))
                                     else:
@@ -298,35 +310,70 @@ for filename in fileinput.input():
     #print("RELS", cpf_relations)
 
 
-    # Create CPF record in database and get ID, returns id    
+    # Create CPF record in database and get ID, returns id   
+    
+    # Lookup the types that need to be changed
+
+    if "entity_type" in cpf:
+        cpf["entity_type"] = lookup_db(db_cur, "vocabulary", {'type':'entity_type','value':cpf["entity_type"]})
+    if "gender" in cpf:
+        cpf["gender"] = lookup_db(db_cur, "vocabulary", {'type':'gender','value':cpf["gender"]})
+    if "language_code" in cpf:
+        cpf["language_code"] = lookup_db(db_cur, "vocabulary", {'type':'language_code','value':cpf["language_code"]})
+    if "script_code" in cpf:
+        cpf["script_code"] = lookup_db(db_cur, "vocabulary", {'type':'script_code','value':cpf["script_code"]})
+    if "language_used" in cpf:
+        cpf["language_used"] = lookup_db(db_cur, "vocabulary", {'type':'language_code','value':cpf["language_used"]})
+    if "script_used" in cpf:
+        cpf["script_used"] = lookup_db(db_cur, "vocabulary", {'type':'script_code','value':cpf["script_used"]})
+    if "maintenance_status" in cpf:
+        cpf["maintenance_status"] = lookup_db(db_cur, "vocabulary", {'type':'script_code','value':cpf["maintenance_status"]})
     cpfid = insert_db(db_cur, "cpf", cpf)
     print("    This record given PostgreSQL CPF_ID: ", cpfid)
     #cpfid = 0 # temporary
     for date_entry in dates:
         date_entry["cpf_id"] = cpfid
+        if "to_type" in date_entry:
+            date_entry["to_type"] = lookup_db(db_cur, "vocabulary", {'type':'date_type','value':date_entry["to_type"]})
+        if "from_type" in date_entry:
+            date_entry["from_type"] = lookup_db(db_cur, "vocabulary", {'type':'date_type','value':date_entry["from_type"]})
         insert_db(db_cur, "dates", date_entry)
     for source in sources:
+        if "source_type" in source:
+            source["source_type"] = lookup_db(db_cur, "vocabulary", {'type':'source_type','value':source["source_type"]})
         s_id = lookup_db(db_cur, "source", {'href':source["href"]})
+        if s_id is None:
+            s_id = insert_db(db_cur, "source", source)
         insert_db(db_cur, "cpf_sources", {'cpf_id':cpfid, 'source_id':s_id})
     for occupation in occupations:
         if occupation is not None:   
-            o_id = lookup_db(db_cur, "occupation", {'term':occupation})
+            o_id = lookup_db(db_cur, "vocabulary", {'type': 'occupation', 'value':occupation})
             insert_db(db_cur, "cpf_occupation", {'cpf_id':cpfid, 'occupation_id':o_id})
     for subject in subjects:
         if subject is not None:   
-            s_id = lookup_db(db_cur, "subject", {'subject':subject})
+            s_id = lookup_db(db_cur, "vocabulary", {'type':'subject', 'value':subject})
             insert_db(db_cur, "cpf_subject", {'cpf_id':cpfid, 'subject_id':s_id})
     for nationality in nationalities:
         if nationality is not None:   
-            n_id = lookup_db(db_cur, "nationality", {'nationality':nationality})
+            n_id = lookup_db(db_cur, "vocabulary", {'type':'nationality', 'value':nationality})
             insert_db(db_cur, "cpf_nationality", {'cpf_id':cpfid, 'nationality_id':n_id})
     for history in cpf_history:
         history["cpf_id"] = cpfid
+        if "event_type" in history:
+            history["event_type"] = lookup_db(db_cur, "vocabulary", {'type':'event_type','value':history["event_type"]})
+        if "agent_type" in history:
+            history["agent_type"] = lookup_db(db_cur, "vocabulary", {'type':'agent_type','value':history["agent_type"]})
         insert_db(db_cur, "cpf_history", history)
     for otherid in cpf_otherids:
         otherid["cpf_id"] = cpfid
+        if "link_type" in otherid:
+            otherid["link_type"] = lookup_db(db_cur, "vocabulary", {'type':'record_type','value':otherid["link_type"]})
         insert_db(db_cur, "cpf_otherids", otherid)
     for document in documents:
+        if "document_type" in document:
+            document["document_type"] = lookup_db(db_cur, "vocabulary", {'type':'document_type','value':document["document_type"]})
+        if "document_role" in document:
+            document["document_role"] = lookup_db(db_cur, "vocabulary", {'type':'document_role','value':document["document_role"]})
         doc_insert =  {'name':document["name"],'href':document["href"],'document_type':document["document_type"]}
         if document.has_key('xml_source'):
             doc_insert['xml_source'] = document["xml_source"]
@@ -338,6 +385,8 @@ for filename in fileinput.input():
         n_id = insert_db(db_cur, "name", {'cpf_id':cpfid, 'original': name["original"], 'preference_score':name["preference_score"]})
         for contributor in name["contributor"]:
             c_id = lookup_db(db_cur, "contributor", {'short_name': contributor["contributor"]})
+            if "name_type" in contributor:
+                contributor["name_type"] = lookup_db(db_cur, "vocabulary", {'type':'name_type','value':contributor["name_type"]})
             insert_db(db_cur, "name_contributor", {'name_id':n_id, 'contributor_id':c_id, 'name_type': contributor["name_type"]})
         if first_name:
             # update the cpf table to have this name id
@@ -359,9 +408,9 @@ for filename in fileinput.input():
     
     # Commit the changes every 1000
     i = i + 1
-    if i % 1000 == 0:
+    if i % 100000 == 0:
         db.commit()
-        print("** Completed 1000 inserts **")
+        print("** Completed 100000 inserts **")
     
 db.commit()
 print("====================\n", "Inserted ", i, " total records")
