@@ -71,6 +71,11 @@ id                  int                 primary key default nextval('version_his
 user_id             int,                -- fk to user.id
 timestamp           timestamp           default now());  -- now()
 
+create table split_merge_history (
+----------------------------------
+from_id             int,                -- fk cpf.id
+to_id               int,                -- fk cpf.id
+timestamp           timestamp           default now());
 
 create table cpf (                      -- Describes one EAC-CPF record
 -------------------
