@@ -27,6 +27,20 @@ def valueOf(tag):
 def termOnly(term):
     return term.split("#")[1][0:]
     
+def lookup_db(db, table, var) :
+    # Try to select on the exact string we're inserting.  If exists, then return that ID.
+    keys = []
+    values = []
+    for k in var.keys():
+        keys.append(k)
+        values.append(var[k])
+    selstr = ''.join(["SELECT id FROM ", table, " WHERE ", "=%s AND ".join(keys), "=%s LIMIT 1"])
+    db.execute(selstr, values)
+    tmp = db.fetchone()
+    if tmp is not None:
+        return tmp[0]
+    return insert_db(db, table, var);
+
 # Insert into database
 def insert_db(db, table, var) :
     # Select didn't return any rows, so do the normal insert.
@@ -66,7 +80,7 @@ languages = {}
 scripts = {}
 
 # Connect to the postgres DB
-db = pgsql.connect("host=localhost dbname=cpf user=snac password=snacsnac")
+db = pgsql.connect("host=localhost dbname=eaccpf user=snac password=snacsnac")
 db_cur = db.cursor()
 
 # Counter
@@ -290,7 +304,6 @@ for filename in fileinput.input():
     
     # TODO Handle the following data
     #print("PLACES", places)
-    #print("RELS", cpf_relations)
 
 
     # Create CPF record in database and get ID, returns id    
@@ -299,6 +312,7 @@ for filename in fileinput.input():
         for rel in cpf_relations:
             relid = lookup_cpf_byark(db_cur, rel["relation_ark_id"])
             if relid is not None:
+                rel["relation_type"] = lookup_db(db_cur, "vocabulary", {'type':'relation_type','value':rel["relation_type"]})
                 insert_db(db_cur, 'cpf_relations', {'cpf_id1':cpfid, 'cpf_id2':relid, 'relation_type':rel["relation_type"], 'relation_entry': rel["relation_entry"]})
 
     # Commit the changes every 1000
