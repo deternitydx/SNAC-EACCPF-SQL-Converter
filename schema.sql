@@ -45,6 +45,15 @@ CREATE SEQUENCE "vocabulary_id_seq"
     CACHE 1;
 
 
+-- Sequence for version history (edit/audit trail)
+CREATE SEQUENCE "version_history_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
 --
 -- B. Main Tables
 --
@@ -55,6 +64,13 @@ id                  int                 primary key default nextval('unique_id_s
 userid              text                unique,        -- text-based user ids
 email               text,               -- contact information for tracking
 name                text);              -- full name text
+
+create table version_history (
+------------------------------
+id                  int                 primary key default nextval('version_history_id_seq'),
+user_id             int,                -- fk to user.id
+timestamp           timestamp           default now());  -- now()
+
 
 create table cpf (                      -- Describes one EAC-CPF record
 -------------------
@@ -70,7 +86,9 @@ script_used         int,                -- (fk -> vocabulary.id) -- from languag
 biog_hist           text,
 conven_dec_citation text,               -- from control/conventionDeclaration/citation (currently just VIAF)
 maintenance_agency  text,
-maintenance_status  int);               -- (fk -> vocabulary.id) 
+maintenance_status  int,                -- (fk -> vocabulary.id) 
+version             int,                -- fk to version_history.id, sequence is unique foreign key
+valid               boolean);           -- Whether or not this is a valid CPF record
 
 create unique index cpf_ark_idx on cpf (ark_id);
 
@@ -78,6 +96,7 @@ create table name (
 --------------------
 id                  int                 primary key default nextval('unique_id_seq'),
 cpf_id              int,                -- CPF record this name describes
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 language            int,                -- (fk -> vocabulary.id) 
 preference_score    float,              -- Preference to use this name
 authorized_form     text,
@@ -94,6 +113,7 @@ create table dates (
 ---------------------
 id                  int                 primary key default nextval('unique_id_seq'),
 cpf_id              int,                -- cpf record this date describes
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 from_date           varchar(10),        -- standardized form
 from_bc             boolean             default false, -- just in case we ever run into a BC date
 from_original       text,               -- original date entered
@@ -107,6 +127,7 @@ is_range            boolean             default false);-- if the date is not a r
 create table document (
 -------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 name                text,               -- from relationEntry's text
 href                text,               -- link to the resource
 document_type       int,                -- (fk -> vocabulary.id) -- type of the document
@@ -117,6 +138,7 @@ create unique index document_href_idx on document (href);
 create table nationality (             
 -------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 nationality         text);              -- string of the nationality
 
 create unique index nationality_idx on nationality (nationality);
@@ -124,6 +146,7 @@ create unique index nationality_idx on nationality (nationality);
 create table place (
 ----------------------
 id                  int                 primary key default nextval('unique_id_seq'),
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 latitude            int,
 longitude           int,
 administrative_code text,
@@ -135,6 +158,7 @@ geonames_id         text);
 create table source (
 -----------------------
 id                  int                 primary key default nextval('unique_id_seq'),
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 source_type         int,                -- maybe unnecessary
 href                text,
 object_xml          text);
@@ -145,6 +169,7 @@ create unique index source_href_idx on source (href);
 create table contributor (              -- Contributors of data (VIAF, LC, WorldCat, etc)
 ---------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 short_name          text);              -- short name of the contributing entity (VIAF, LC, WorldCat, NLA, etc)
 
 create unique index contributor_idx on contributor (short_name);
@@ -166,6 +191,7 @@ create index vocabulary_value_idx on vocabulary(value);
 create table cpf_otherids (
 ----------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 cpf_id              int,                -- (fk -> cpf.id)
 other_id            text,               -- other record id (usually from merge)
 link_type           int);               -- (fk -> vocabulary.id) -- type of link (right now, only MergedRecord)
@@ -174,12 +200,14 @@ create table cpf_sources (
 ----------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
 cpf_id              int,                -- (fk -> cpf.id)
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 source_id           int);               -- (fk -> control_sources.id)
 
 create table cpf_history (
 ----------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
 cpf_id              int,                -- (fk -> cpf.id)
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 modified_time       date,
 event_type          int,                -- (fk -> vocabulary.id)     
 agent_type          int,                -- (fk -> vocabulary.id)     
@@ -191,12 +219,15 @@ create table cpf_occupation (
 -----------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
 cpf_id              int,                -- (fk -> cpf.id)
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 occupation_id       int);               -- (fk -> vocabulary.id)
 
 create table cpf_relations (
 -----------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
 cpf_id1             int,                -- (fk -> cpf.id)
+version             int,                -- fk to version_history.id, sequence is unique foreign key
+                                        -- version relates to cpf_id1, since this is a 1-way relation
 cpf_id2             int,                -- (fk -> cpf.id)
 relation_type       int,                -- (fk -> vocabulary.id) -- associated, corresponded, etc
 relation_entry      text,               -- relationEntry from the creation of the eac-cpf record (should be unnecessary in db)
@@ -206,6 +237,7 @@ create table cpf_place (
 ----------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
 cpf_id              int,                -- (fk -> cpf.id)
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 place_id            int,                -- (fk -> place.id)
 place_match_type    int,                -- (fk -> vocabulary.id) -- likelySame, maybeSame, unmatched
 original            text,
@@ -215,6 +247,7 @@ create table cpf_function (
 ----------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
 cpf_id              int,                -- (fk -> cpf.id)
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 function_term       text,               -- function/term
 function_type       int);               -- (fk -> vocabulary.id) -- might be null, could be "DerivedFromRole"
 
@@ -222,6 +255,7 @@ create table cpf_document (
 -----------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
 cpf_id              int,                -- (fk -> cpf.id)
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 document_id         int,                -- (fk -> document.id)
 document_role       int,                -- (fk -> vocabulary.id) -- creatorOf, referencedIn, etc
 link_type           text,               -- link type
@@ -231,17 +265,20 @@ create table cpf_nationality (
 ------------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
 cpf_id              int,                -- (fk -> cpf.id)
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 nationality_id      int);               -- (fk -> nationality.id)
 
 create table cpf_subject (
 ------------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
 cpf_id              int,                -- (fk -> cpf.id)
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 subject_id          int);               -- (fk -> vocabulary.id)
 
 create table name_contributor (         -- Link names to their contributing organization
 --------------------------------
 id                  int                 primary key default nextval('unique_id_seq'),
+version             int,                -- fk to version_history.id, sequence is unique foreign key
 name_id             int,                -- (fk -> name.id)
 contributor_id      int,                -- (fk -> contributor.id)
 name_type           int);               -- (fk -> vocabulary.id) -- type of name (authorizedForm, alternativeForm)
