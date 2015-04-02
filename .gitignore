@@ -1,2 +1,3 @@
 *.txt
+*.err
 sql_files/
