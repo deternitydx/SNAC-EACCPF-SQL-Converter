@@ -131,7 +131,16 @@ country_code        text,
 name                text,
 geonames_id         text);
 
-create unique index subject_idx on subject (subject);
+
+create table source (
+-----------------------
+id                  int                 primary key default nextval('unique_id_seq'),
+source_type         int,                -- maybe unnecessary
+href                text,
+object_xml          text);
+
+create unique index source_href_idx on source (href);
+
 
 create table contributor (              -- Contributors of data (VIAF, LC, WorldCat, etc)
 ---------------------------
