@@ -73,6 +73,7 @@ maintenance_agency  text,
 maintenance_status  int);               -- (fk -> vocabulary.id) 
 
 create unique index cpf_ark_idx on cpf (ark_id);
+create index cpf_name_id_idx on cpf(name_id);
 
 create table name (
 --------------------
@@ -89,6 +90,7 @@ middle              text,
 last                text,
 suffix              text,
 additional_parts    text);
+
 
 create table dates (
 ---------------------
@@ -245,3 +247,4 @@ id                  int                 primary key default nextval('unique_id_s
 name_id             int,                -- (fk -> name.id)
 contributor_id      int,                -- (fk -> contributor.id)
 name_type           int);               -- (fk -> vocabulary.id) -- type of name (authorizedForm, alternativeForm)
+
