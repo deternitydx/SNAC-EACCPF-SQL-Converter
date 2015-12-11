@@ -16,7 +16,7 @@ except AttributeError:
         ET._namespace_map[uri] = prefix
 
 # Connect to the postgres DB
-db = pgsql.connect("host=localhost dbname=eaccpf user=snac password=snacsnac")
+db = pgsql.connect("host=localhost dbname=snac_latest user=snac password=snacsnac")
 db_cur = db.cursor()
 
 
@@ -56,12 +56,13 @@ languages = {}
 scripts = {}
 
 # Open documents for writing
-sourcef = open("source.sql", "w")
-occupationf = open("occupation.sql", "w")
-subjectf = open("subject.sql", "w")
-nationalityf = open("nationality.sql", "w")
-documentf = open("document.sql", "w")
-contributorf = open("contributor.sql", "w")
+sourcef = open("sql/source.sql", "w")
+occupationf = open("sql/occupation.sql", "w")
+subjectf = open("sql/subject.sql", "w")
+nationalityf = open("sql/nationality.sql", "w")
+documentf = open("sql/document.sql", "w")
+contributorf = open("sql/contributor.sql", "w")
+functionf = open("sql/function.sql", "w")
 
 # For each file given on standard input, parse and look at
 for filename in fileinput.input():
@@ -77,6 +78,7 @@ for filename in fileinput.input():
     sources = []
     documents = []
     occupations = []
+    functions = []
     places = []
     subjects = []
     nationalities = []
@@ -180,16 +182,16 @@ for filename in fileinput.input():
                                         if (edates[0].text is not None):
                                             date["from_date"] = edates[0].get("standardDate")
                                             date["from_original"] = edates[0].text
-                                            date["from_type"] = termOnly(edates[0].get("localType"))
+                                            #date["from_type"] = termOnly(edates[0].get("localType"))
                                         if (len(edates) > 1 and valueOf(edates[1].tag) == "toDate" and edates[1].text is not None):
                                             date["to_date"] = edates[1].get("standardDate")
                                             date["to_original"] = edates[1].text
-                                            date["to_type"] = termOnly(edates[1].get("localType"))
+                                            #date["to_type"] = termOnly(edates[1].get("localType"))
                                     elif (valueOf(edates[0].tag) == "toDate"):
                                         if (edates[0].text is not None):
                                             date["to_date"] = edates[0].get("standardDate")
                                             date["to_original"] = edates[0].text
-                                            date["to_type"] = termOnly(edates[0].get("localType"))
+                                            #date["to_type"] = termOnly(edates[0].get("localType"))
                                     else:
                                         warning("Unknown Tag: ", tag, dtag, d2tag, valueOf(edates.tag), valueOf(edates[0].tag))
                                     dates.append(date)
@@ -228,6 +230,10 @@ for filename in fileinput.input():
                                     cpf["script_used"] = lang.get("scriptCode")
                                 else:
                                     warning("Unknown Tag: ", tag, dtag, d2tag, lang.tag)
+                        elif (d2tag == "function"):
+                            functions.append(description[0].text)
+                            if (len(description) > 1):
+                                warning("Unknown Tag: ", tag, dtag, d2tag, description[1].tag)
                         elif (d2tag == "occupation"):
                             occupations.append(description[0].text)
                             if (len(description) > 1):
@@ -240,10 +246,10 @@ for filename in fileinput.input():
                         if (rtag == "cpfRelation"):
                             relation = {}
                             if (len(rel) > 1):
-                                warning("Unknown Tag: ", tag, dtag, d2tag, description[1].tag)
+                                warning("Unknown Tag: ", tag, dtag, rtag, rel[1].tag)
                             relation["relation_type"] = termOnly(rel.get("{http://www.w3.org/1999/xlink}arcrole"))
                             relation["relation_ark_id"] = rel.get("{http://www.w3.org/1999/xlink}href")
-                            relation["relation_other_type"] = termOnly(rel.get("{http://www.w3.org/1999/xlink}role"))
+#                            relation["relation_other_type"] = termOnly(rel.get("{http://www.w3.org/1999/xlink}role"))
                             if (len(rel) > 0):
                                 relation["relation_entry"] = rel[0].text
                             else:
@@ -276,6 +282,9 @@ for filename in fileinput.input():
     # Write the data files for each of these items.  They will later be deduped and inserted into the database
     for source in sources:
         s_id = writefile( sourcef, "source", source)
+    for function in functions:
+        if function is not None:   
+            f_id = writefile(functionf, "function", {'term':function})
     for occupation in occupations:
         if occupation is not None:   
             o_id = writefile(occupationf, "occupation", {'term':occupation})
@@ -298,6 +307,7 @@ for filename in fileinput.input():
    
 sourcef.close()
 occupationf.close()
+functionf.close()
 subjectf.close()
 nationalityf.close()
 documentf.close()
